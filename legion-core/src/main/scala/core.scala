@@ -10,10 +10,10 @@ import scala.util.Random
 
 
 import gossip.{Peer, PeerView}
-import enkidu.mux._
+import Enkidu.Mux._
 import com.twitter.util.{Future, Promise}
 
-import enkidu.{Connection, WorkerPool, ChannelFlow, Flow}
+import Enkidu.{Connection, WorkerPool, ChannelFlow, Flow}
 
 trait PeerService {
   def connect(peer: Peer): Future[Flow[TMSG, RMSG] ]

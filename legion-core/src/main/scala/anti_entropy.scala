@@ -4,8 +4,8 @@ import legion.PeerService
 
 import gossip._
 import java.util.UUID
-import enkidu.{Flow, Connection}
-import enkidu.mux._
+import Enkidu.{Flow, Connection}
+import Enkidu.Mux._
 import com.google.protobuf.ByteString
 import com.twitter.util._
 

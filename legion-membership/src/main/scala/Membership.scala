@@ -3,7 +3,7 @@ package legion.membership
 
 import com.twitter.util.Future
 import legion.PeerService
-import enkidu.mux.{TMSG, RMSG, Headers}
+import Enkidu.Mux.{TMSG, RMSG, Headers}
 
 import legion.rumor_proto._
 import gossip._
@@ -27,9 +27,11 @@ object Paths {
 
 
 
-object Handlers { 
+class Handlers(config: Config) {
 
 
+
+  val Disseminator = new Disseminator(config) 
   def replyOK(flow: ServerFlow, body: ByteString) = {
 
     val reply= Reply(true, body)
@@ -49,51 +51,51 @@ object Handlers {
   }
 
 
-  def join(config: Config, peer: Peer, flow: ServerFlow) = {
-    config.sampler.join(peer)
-    val payload = config.sampler.view.toByteString
+  def join(peer: Peer, flow: ServerFlow) = {
+    config.PS.join(peer)
+    val payload = config.PS.view.toByteString
     replyOK(flow, payload)
   }
 
 
-  def joinRumor(config: Config, rumor: Rumor) = {
+  def joinRumor(rumor: Rumor) = {
 
 
     
     def processRumor(r: Rumor) = {
       val peer = r.payload.toByteArray() |> Peer.parseFrom
 
-      config.sampler.join(peer)
+      config.PS.join(peer)
     }
 
 
     def toTMSG(r: Rumor) = TMSG(Paths.join_rumor, Headers.empty, r.toByteArray)
 
-    Disseminator.handleRumor(config, rumor, toTMSG, processRumor)
+    Disseminator.handleRumor( rumor, toTMSG, processRumor)
 
   }
 
 
 
-  def deadRumor(config: Config, rumor: Rumor) = {
+  def deadRumor(rumor: Rumor) = {
 
     def processRumor(r: Rumor) = {
       val peer = r.payload.toByteArray() |> Peer.parseFrom
-      config.sampler.dead(peer)
+      config.PS.dead(peer)
     }
 
 
     def toTMSG(r: Rumor) = TMSG(Paths.death_rumor, Headers.empty, r.toByteArray)
 
-    Disseminator.handleRumor(config, rumor, toTMSG, processRumor)
+    Disseminator.handleRumor(rumor, toTMSG, processRumor)
   }
 
 
 
 
-  def suspect(config: Config, peer: Peer, flow: ServerFlow) = {
+  def suspect(peer: Peer, flow: ServerFlow) = {
 
-    val sock = config.sampler.connect(peer)
+    val sock = config.PS.connect(peer)
 
 
     val f = sock flatMap { trans =>
@@ -102,7 +104,7 @@ object Handlers {
 
 
     def isDead() = {
-      config.sampler.dead(peer)
+      config.PS.dead(peer)
       Future { emptyReply(false) |> replyToRMSG}
     }
 
@@ -112,26 +114,26 @@ object Handlers {
   }
 
 
-  def handle(config: Config, req: TMSG, flow: ServerFlow) = {
+  def handle(req: TMSG, flow: ServerFlow) = {
  
     req.path match {
       case Paths.join_rumor =>
         val rumor = Rumor.parseFrom(req.payload)
-        joinRumor(config, rumor) 
+        joinRumor(rumor) 
 
 
       case Paths.death_rumor =>
         val rumor = Rumor.parseFrom(req.payload)
-        deadRumor(config, rumor)
+        deadRumor(rumor)
 
       case Paths.suspect =>
         val peer = Peer.parseFrom(req.payload)
-        suspect(config, peer, flow) 
+        suspect(peer, flow) 
 
 
       case Paths.join =>
         val peer = Peer.parseFrom(req.payload)
-        join(config, peer, flow) 
+        join( peer, flow) 
 
 
       case Paths.ping =>

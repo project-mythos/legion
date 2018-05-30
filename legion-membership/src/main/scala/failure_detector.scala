@@ -1,7 +1,7 @@
 package legion.membership
 
-import enkidu.{Connection}
-import enkidu.mux.{TMSG, RMSG, Headers}
+import Enkidu.{Connection}
+import Enkidu.Mux.{TMSG, RMSG, Headers}
 
 import legion.rumor_proto._
 import gossip._
@@ -46,15 +46,17 @@ object MembershipClient {
 
 class FailureDetector(config: Config, interval: Duration) {
 
-  val sampler = config.sampler
+  val Disseminator = new Disseminator(config)
+
+  val PS = config.PS
   val fanout = config.fanout
 
 
   def broadcastDeath(deadPeer: Peer): Unit = {
-    sampler.dead(deadPeer)
+    PS.dead(deadPeer)
 
     val change = deadPeer.toByteString
-    val rumor = Disseminator.newRumor(config, change)
+    val rumor = Disseminator.newRumor(change)
 
 
     def toTMSG(r: Rumor) = {
@@ -62,7 +64,7 @@ class FailureDetector(config: Config, interval: Duration) {
       TMSG(path, Headers.empty, rumor.toByteArray)
     }
 
-    Disseminator.spread(config, rumor, toTMSG)
+    Disseminator.spread(rumor, toTMSG)
   }
 
 
@@ -71,9 +73,9 @@ class FailureDetector(config: Config, interval: Duration) {
 
     val rid = UUID.randomUUID().toString
 
-    val reportTo = sampler.selectOne()
+    val reportTo = PS.selectOne()
 
-    val f = sampler.connect(reportTo) flatMap {flow =>
+    val f = PS.connect(reportTo) flatMap {flow =>
       MembershipClient.suspect(flow, deadPeer)
     }
 
@@ -89,7 +91,7 @@ class FailureDetector(config: Config, interval: Duration) {
 
   def detect(peer: Peer) = {
 
-    sampler.connect(peer) flatMap {flow =>
+    PS.connect(peer) flatMap {flow =>
       MembershipClient.ping(flow)
     } rescue {case e => suspectPeer(peer) }  
 
@@ -97,7 +99,7 @@ class FailureDetector(config: Config, interval: Duration) {
 
 
   def detector() = {
-    sampler.select(config.fanout) map { peer =>
+    PS.select(config.fanout) map { peer =>
       detect(peer)
     }
   }
