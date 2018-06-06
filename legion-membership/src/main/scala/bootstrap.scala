@@ -1,15 +1,15 @@
-package legion.membership
-import legion.{DefaultPeerService, PeerConnection}
-import enkidu.{Listener, WorkerPool, Connection, Flow}
-import enkidu.mux._
+package Legion.Membership
+import Legion.{DefaultPeerService, PeerConnection}
+import Enkidu.{Listener, WorkerPool, Connection, Flow}
+import Enkidu.Mux._
 
 import io.netty.channel.{ChannelPipeline}
-import legion.rumor_proto.{Config, Disseminator}
+import Legion.Epidemic.{Config, Disseminator}
 import io.netty.channel.socket.nio.NioServerSocketChannel
 
 import bloomfilter.mutable.BloomFilter
 import com.twitter.util.Duration
-import gossip._
+import Legion.Gossip._
 /**
 object Bootstrap {
 

@@ -1,12 +1,11 @@
-package legion.membership
-
+package Legion.Membership 
 
 import com.twitter.util.Future
-import legion.PeerService
+import Legion.PeerService
 import Enkidu.Mux.{TMSG, RMSG, Headers}
 
-import legion.rumor_proto._
-import gossip._
+import Legion.Epidemic._
+import Legion.Gossip._
 import com.google.protobuf.ByteString
 
 import legion.operators.PipeOps._
@@ -14,6 +13,7 @@ import Disseminator.ServerFlow
 
 
 object Paths {
+
 
   val join = List("membership", "join")
   val suspect = List("membership", "suspect")
@@ -31,7 +31,8 @@ class Handlers(config: Config) {
 
 
 
-  val Disseminator = new Disseminator(config) 
+  val Disseminator = new Disseminator(config)
+
   def replyOK(flow: ServerFlow, body: ByteString) = {
 
     val reply= Reply(true, body)

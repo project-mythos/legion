@@ -1,10 +1,10 @@
-package legion.membership
+package Legion.Membership
 
 import Enkidu.{Connection}
 import Enkidu.Mux.{TMSG, RMSG, Headers}
 
-import legion.rumor_proto._
-import gossip._
+import Legion.Epidemic._
+import Legion.Gossip._
 
 import com.twitter.util.{Future, Duration, JavaTimer}
 import Disseminator.ClientFlow

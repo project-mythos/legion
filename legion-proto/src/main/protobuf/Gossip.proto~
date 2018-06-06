@@ -1,3 +1,4 @@
+namespace java Legion; 
 syntax="proto2";
 
 

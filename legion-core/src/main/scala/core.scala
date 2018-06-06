@@ -1,4 +1,4 @@
-package legion
+package Legion
 
 import io.netty.channel.{ ChannelInitializer , Channel}
 import io.netty.channel.socket.SocketChannel
@@ -9,7 +9,7 @@ import java.net.InetSocketAddress
 import scala.util.Random
 
 
-import gossip.{Peer, PeerView}
+import Legion.Gossip.{Peer, PeerView}
 import Enkidu.Mux._
 import com.twitter.util.{Future, Promise}
 

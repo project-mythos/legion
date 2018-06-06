@@ -1,8 +1,8 @@
-package legion.anti_entropy
+package Legion.AntiEntropy
 import legion.operators.PipeOps._
-import legion.PeerService
+import Legion.PeerService
 
-import gossip._
+import Legion.Gossip._
 import java.util.UUID
 import Enkidu.{Flow, Connection}
 import Enkidu.Mux._

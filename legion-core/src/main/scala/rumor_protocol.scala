@@ -1,12 +1,12 @@
-package legion.rumor_proto
+package Legion.Epidemic 
 
 import Enkidu.{Flow, Connection}
 import Enkidu.Mux._
-import gossip._
+import Legion.Gossip._
 import java.util.UUID
 
 import bloomfilter.mutable.BloomFilter
-import legion.PeerService
+import Legion.PeerService
 
 
 import com.twitter.util.Future
