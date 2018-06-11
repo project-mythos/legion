@@ -98,28 +98,27 @@ class Disseminator(config: Config) {
   def handleRumor[T](
     view: PeerView,
     tmsg: TMSG,
-    process: (Rumor, TMSG) => Future[T]
+    rumor: Rumor,
+    process: TMSG => Future[T]
   ): Future[T]  = {
-    
-    Future { RumorSession.decode(tmsg).get } flatMap { rumor =>
 
-      val status = SIR.check(conf, rumor)
+    val status = SIR.check(conf, rumor)
 
-      status match {
+    status match {
 
-        case SIR.Contagious =>
-          forward(view, rumor, tmsg)
-          process(rumor, tmsg)
+      case SIR.Contagious =>
+        forward(view, rumor, tmsg)
+        process(tmsg)
 
-        case SIR.Susceptible =>
-          process(rumor, tmsg)
+      case SIR.Susceptible =>
+        process(tmsg)
 
-        case SIR.Infected =>
-          Future.exception( SIR.Infected )
-      }
+      case SIR.Infected =>
+        Future.exception( SIR.Infected )
     }
-
   }
+
+
 
 }
 

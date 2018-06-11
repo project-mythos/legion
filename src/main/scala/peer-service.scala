@@ -67,9 +67,7 @@ class Client(D: Disseminator)  {
 
     D.markSeen(rumor)
 
-    val req = TMSG(path, local.toByteArray) |> { msg => RmrTS.encode(msg, rumor)
-
-    }
+    val req = TMSG(path, local.toByteArray) |> { msg => RmrTS.encode(msg, rumor) }
 
     val rep = PS.connect(bs) flatMap {flow =>
       Connection.send_recv(flow, req)
@@ -152,6 +150,7 @@ class Client(D: Disseminator)  {
     } map {rep => pingAcked(rep) } 
 
     acked map {b =>
+      println(b)
       if (b) view
       else view.leave(suspect) 
     } onFailure {e =>
@@ -202,6 +201,21 @@ class Client(D: Disseminator)  {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import Enki.SyncVar
 
 
@@ -218,7 +232,7 @@ class Server(seed: PeerView, D: Disseminator) {
 
   val pong = RMSG( "PONG".getBytes("utf8") )
 
-  def view: PeerView = state.get
+  def view(): PeerView = state.get
 
 
   def isSource(rumor: Rumor, peer: Peer) = {
@@ -230,7 +244,7 @@ class Server(seed: PeerView, D: Disseminator) {
 
   def join(flow: SFlow, tmsg: TMSG) = {
 
-    def op(rumor: Rumor, tmsg: TMSG) = {
+    def op(rumor: Rumor)(tmsg: TMSG) = {
 
       val peer = Peer.parseFrom(tmsg.payload)
       val isBS = isSource(rumor, peer)
@@ -239,14 +253,18 @@ class Server(seed: PeerView, D: Disseminator) {
       (isBS, v1)
 
       if (isBS) {
-        val rep = RMSG( PeerViewSync.encode(v1) ) 
+        val rep = RMSG( PeerViewSync.encode(v1) )
         flow.write(rep)
       } else {
         Future.Done
       }
     }
 
-    D.handleRumor(view, tmsg, op)
+    RumorP.decode(tmsg) match {
+      case Some(rumor) => D.handleRumor(view, tmsg, rumor,  op(rumor))
+      case None =>
+        Future.Done
+    }
   }
 
 
@@ -290,6 +308,20 @@ class Server(seed: PeerView, D: Disseminator) {
   type SFlow = Flow[RMSG, TMSG]
 
 
+  def rumorFilter[T](tmsg: TMSG, f: TMSG => Future[T]) = {
+    val rumorO = RumorP.decode(tmsg)
+
+    rumorO match {
+      case Some(rumor) => D.handleRumor(view, tmsg, rumor, f)
+
+      case _ =>
+
+        val e = new Exception("Could not extract rumor")
+        Future.exception(e)
+    }
+
+  }
+
 
 
   def memberlist_cb(flow: Flow[RMSG, TMSG], req: TMSG) = {
@@ -298,11 +330,11 @@ class Server(seed: PeerView, D: Disseminator) {
      def leave_op(rumor: Rumor, tmsg: TMSG) = { leave(tmsg) } 
        
 
+
     req.path match {
 
       case List("memberlist", "join") => join(flow, req)
-
-      case List("memberlist", "leave") =>  D.handleRumor(view, req, leave_op)
+      case List("memberlist", "leave") =>  rumorFilter(req, leave)
 
       case List("memberlist", "ping") => ping(req) flatMap {rep => flow.write(rep)}
 
@@ -312,7 +344,7 @@ class Server(seed: PeerView, D: Disseminator) {
         indirect_ping(flow, req, RumorP.decode(req).get) flatMap(rep => flow.write(rep) )
 
       case List("memberlist", "dead") =>
-        D.handleRumor(view, req, leave_op)
+        rumorFilter(req, dead)
 
       case List("memberlist", "exchange") =>
         exchange_views(flow, req, ExchP.decode(req).get )
@@ -353,7 +385,7 @@ class Server(seed: PeerView, D: Disseminator) {
 
     val laddr = Addr.toSocketAddress(view.local)
 
-    cb match {
+    val l: Future[Unit] = cb match {
       case Some(callback) =>
         val cb1: CB = withMemberListCB(callback)
         L.listen(laddr)( handler(cb1) )
@@ -362,18 +394,34 @@ class Server(seed: PeerView, D: Disseminator) {
         L.listen(laddr)( handler(memberlist_cb) )
     }
 
-    Procs.failureDetector(fdInterval)
-    Procs.view_maintenance(fdInterval)
+    l map { x =>
+
+      Procs.failureDetector(fdInterval)
+      Procs.view_maintenance(fdInterval)
+      Future.Done
+    }
+
+
   }
 
+
+
   def bootstrap(
-    contact: Peer, 
+    contact: Peer,
     L: Listener[RMSG, TMSG],
     fdInterval: Duration = Procs.defaultInterval,
     syncInterval: Duration = Procs.defaultInterval,
     cb: Option[CB] = None
   ) = {
-    
+
+
+    start(L, fdInterval, syncInterval, cb) flatMap { x =>
+
+      CLI.join(view.local, contact) map { x =>
+        state.update{v => PeerViewSync.merge(v, x) }
+      }
+
+    }
   }
 
 
@@ -391,7 +439,7 @@ class Server(seed: PeerView, D: Disseminator) {
     def failureDetector(interval: Duration) = {
 
 
-      def detect = {
+      def detect() = {
         if (notEmpty)  {
 
           PS.select(view, D.conf.fanout) foreach { peer =>
@@ -410,7 +458,7 @@ class Server(seed: PeerView, D: Disseminator) {
       timer.schedule(interval)(detect)  
     }
 
-    def notEmpty = view.neighbors.isEmpty != true
+    def notEmpty() = view.neighbors.isEmpty != true
 
 
 
@@ -425,11 +473,3 @@ class Server(seed: PeerView, D: Disseminator) {
 
 }
 
-
-object Server {
-
-
-
-
-
-}

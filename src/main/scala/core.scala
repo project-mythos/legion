@@ -17,7 +17,7 @@ import Enkidu.{Connection, WorkerPool, ChannelFlow, Flow}
 import Enki_DT.{SetCRDT, ORSet}
 
 
-
+import Enki.PipeOps._
 
 case class PeerView(local: Peer, membership: ORSet[Peer]) {
 
@@ -44,10 +44,19 @@ case class PeerView(local: Peer, membership: ORSet[Peer]) {
 }
 
 
+/*
+trait Sampler {
+  def connect[T](peer: Peer)(f: Flow[TMSG, RMSG] => T): Future[T]
+  def select(view: PeerView, i: Int): List[Peer]
+  def selectOne(view: PeerView): Peer 
+}
+
+*/
+
 
 object PeerView {
   def apply(local: Peer): PeerView = {
-    val mlist = ORSet.empty(local.id) |> {os => ORSet.add(os, local) }
+    val mlist = ORSet.empty[Peer](local.id) |> {os => ORSet.add(os, local) }
     PeerView(local, mlist)
   }
 }

@@ -107,15 +107,15 @@ class EntryBridge[T](C: DTCodec[T]) extends PBBridge[Entry[T], OSE] {
 
   def toPB(entry: Entry[T]) = {
     val element1 = C.encode(entry.element) |> ByteString.copyFrom
-    val dot1 = PDot(entry.dot.id, entry.dot.counter)
+    val dot1 = entry.dots.map (dot => PDot(dot.id, dot.counter) ).toSeq
     OSE(element1, dot1)
   }
 
 
   def fromPB(entry: OSE) = {
     val element1 = entry.element.toByteArray() |> C.decode
-    val dot = Dot(entry.dot.id, entry.dot.counter)
-    Entry(element1, dot)
+    val dots = entry.dots.map {dot => Dot(dot.id, dot.counter) }.toSet
+    Entry(element1, dots)
   }
 }
 

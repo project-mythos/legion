@@ -5,9 +5,17 @@ import Enkidu.Mux._
 import Enki.PipeOps._
 import java.util.UUID
 
+import Enki.KeyHasher.FNV1A_64
 
 
 object Addr {
+
+  def make(addr: String, port: Int) = {
+    val key = s"$addr:$port".getBytes("utf8")
+    val id = FNV1A_64.hashKey(key).toString
+    Peer(id, addr, port)
+  }
+
   def toString(addr: Peer) = {
     s"${addr.id}@${addr.host}:${addr.port}"
   }
@@ -47,7 +55,7 @@ object Rumor {
 
   def zero(peer: Peer) = {
     val id = UUID.randomUUID().toString
-    Rumor(id, 1, peer)
+    Rumor(id, 0, peer)
   }
 
 
@@ -88,12 +96,11 @@ class RumorSession[T](M: MSG[T]) {
 
     res match {
 
-      case (Some(id), Some(round), Some(from)) => Some(
-        Rumor(id, round, from)
-      )
+      case (Some(id), Some(round), Some(from)) =>
+        Some( Rumor(id, round, from) )
 
-      case _ => None
-
+      case _ =>
+        None
     }
 
   }

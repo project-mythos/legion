@@ -10,7 +10,7 @@ message Dot {
 
 message Entry {
   required bytes element = 1;
-  required Dot dot = 2; 
+  repeated Dot dots = 2; 
 }
 
 message ORSet {
