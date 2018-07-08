@@ -9,7 +9,7 @@ import io.netty.channel.embedded.EmbeddedChannel
 
 object Helpers {
   val lhost = "localhost"
-  def nextPeer = Addr.make(lhost, RandomSocket.nextPort)
+  def nextPeer = Node(lhost, RandomSocket.nextPort)
   def isSome[T](o: Option[T]) = o match {
     case Some(x) => true
     case _ => false

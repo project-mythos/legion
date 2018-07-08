@@ -1,131 +1,55 @@
 package Legion
 
-import io.netty.channel.{ ChannelInitializer , Channel}
-import io.netty.channel.socket.SocketChannel
-
-import io.netty.channel.socket.nio.NioSocketChannel
-import io.netty.bootstrap.Bootstrap
-import java.net.InetSocketAddress
-import scala.util.Random
-
-
 import Gossip.Messages.Peer
-import Enkidu.Mux._
-import com.twitter.util.{Future, Promise}
-
-import Enkidu.{Connection, WorkerPool, ChannelFlow, Flow}
 import Enki_DT.{SetCRDT, ORSet}
 
 
 import Enki.PipeOps._
+import Enkidu.Node
 
-case class PeerView(local: Peer, membership: ORSet[Peer]) {
 
+
+
+case class View(local: Node, membership: ORSet[Node]) {
   def neighbors = {
-    (ORSet.query(membership) - local).toList
+    (ORSet.query(membership) - local).toVector
   }
 
-  def commit(m: ORSet[Peer]) = {
+  def commit(m: ORSet[Node]) = {
     this.copy(membership = m)
   }
 
-  def join(peer: Peer) = {
+  def join(peer: Node) = {
     val ns = ORSet.add(membership, peer)
     commit(ns)
   }
 
 
-  def leave(peer: Peer) = {
+  def leave(peer: Node) = {
     val ns = ORSet.delete(membership, peer)
     commit(ns)
   }
 
-
-}
-
-
-/*
-trait Sampler {
-  def connect[T](peer: Peer)(f: Flow[TMSG, RMSG] => T): Future[T]
-  def select(view: PeerView, i: Int): List[Peer]
-  def selectOne(view: PeerView): Peer 
-}
-
-*/
-
-
-object PeerView {
-  def apply(local: Peer): PeerView = {
-    val mlist = ORSet.empty[Peer](local.id) |> {os => ORSet.add(os, local) }
-    PeerView(local, mlist)
-  }
-}
-
-
-
-object PeerConnection {
-
-  def toAddress(peer: Peer) = {
-    new InetSocketAddress(peer.host, peer.port)
-  }
-
-  def connect(bs: Bootstrap, peer: Peer) = {
-    Connection.connect[TMSG, RMSG](bs, toAddress(peer) )
-  }
-}
-
-
-
-class Sampler(BS: Bootstrap) {
-
-
-  def connect(peer: Peer) = PeerConnection.connect(BS, peer)
-
-  def select(view: PeerView, f: Int) = {
-    Random.shuffle(view.neighbors).take(f).toList
-  }
-
-  def selectOne(view: PeerView): Peer = {
-    val i = Random.nextInt(view.neighbors.size)
-    view.neighbors(i)
-  }
-
-
-  def select(view: PeerView, f: Int, pred: Peer => Boolean): List[Peer] = {
-    val n1 = view.neighbors.filter(pred)
-    Random.shuffle(n1).take(f).toList
-  }
-
-
-  def selectOne(view: PeerView, pred: Peer => Boolean ) = {
-    val n1 = view.neighbors.filter(pred)
-    val i = Random.nextInt(n1.size)
-    n1(i)
-  }
-
+  def isEmpty() = neighbors.isEmpty
+  def notEmpty() = neighbors.isEmpty == false 
 
 }
 
 
 
-/**
-object DefaultPeerService {
 
-  def initMux() = new ChannelInitializer[Channel] {
 
-    def initChannel(ch: Channel) = {
-      ch.pipeline.addLast(new TMSGEncoder())
-      ch.pipeline.addLast(new RMSGDecoder())
-    }
+object View {
 
+  def apply(local: Node): View = {
+    val mlist = ORSet.empty[Node](local.id.toString) |> {os => ORSet.add(os, local) }
+    View(local, mlist)
   }
-
-  def make(pool: WorkerPool, view: PeerView) = {
-    val b = Connection.bootstrap[TMSG, RMSG](classOf[NioSocketChannel], initMux, pool)
-    new DefaultPeerService(b)
-  }
-
 
 }
-  
-**/
+
+
+
+
+
+

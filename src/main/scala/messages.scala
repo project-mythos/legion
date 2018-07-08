@@ -1,65 +1,67 @@
 package Gossip.Messages 
 
 import java.net.InetSocketAddress
+import Enki.PipeOps._
 import Enkidu.Mux._
 import Enki.PipeOps._
 import java.util.UUID
 
-import Enki.KeyHasher.FNV1A_64
+import Enkidu.Node
+import com.trueaccord.scalapb.TypeMapper
+import Enki_DT.Proto.PBBridge
+import scala.language.implicitConversions
 
+object Node2 extends PBBridge[Node, Peer] {
 
-object Addr {
+  val companion = Peer
 
-  def make(addr: String, port: Int) = {
-    val key = s"$addr:$port".getBytes("utf8")
-    val id = FNV1A_64.hashKey(key).toString
-    Peer(id, addr, port)
+  def toPB(node: Node) = {
+    Peer(node.id.toString, node.host, node.port)
   }
 
-  def toString(addr: Peer) = {
-    s"${addr.id}@${addr.host}:${addr.port}"
+
+  def fromPB(peer: Peer) = {
+    Node(peer.id.toLong, peer.host, peer.port)
   }
 
-  def fromString(s: String) = {
-    val id :: tl = s.split("@").toList
 
-    val toks = tl(0).split(":").toList
-    Peer(id, toks(0), toks(1).toInt)
+
+  class Encoder(n: Node) {
+    def toByteArray() = toPB(n).toByteArray
   }
 
-  def toSocketAddress(a: Peer) = new InetSocketAddress(a.host, a.port) 
 
+  implicit def encodeable(n: Node) = new Encoder(n)
+  //def parseFrom(b: Array[Byte]) = ( Peer.parseFrom(b) |> fromPB )
 
 }
 
 
-
-
-
-
-
 case class Rumor(
-  id: String, round: Int, from: Peer
+  id: String, round: Int, from: Node
 ) {
+
   def nextRound = this.copy(round = round + 1)
+
 }
 
 
 object Rumor {
 
-  def apply(peer: Peer): Rumor = {
+  def apply(peer: Node): Rumor = {
     val id = UUID.randomUUID().toString
     Rumor(id, 1, peer)
   }
 
 
-  def zero(peer: Peer) = {
+  def zero(peer: Node) = {
     val id = UUID.randomUUID().toString
     Rumor(id, 0, peer)
   }
 
 
 }
+
 
 
 
@@ -74,7 +76,7 @@ class RumorSession[T](M: MSG[T]) {
       ("rumor-id", rumor.id),
       ("gossip-type", "rumor"),
       ("round", rumor.round.toString),
-      ("from", Addr.toString(rumor.from) )
+      ("from", Node.toString(rumor.from) )
     )
 
     
@@ -91,7 +93,7 @@ class RumorSession[T](M: MSG[T]) {
     val res = (
       Headers.get(h, "rumor-id"),
       Headers.get(h, "round") map {x => x.toInt},
-      Headers.get(h, "from") map {a => Addr.fromString(a) },
+      Headers.get(h, "from") map {a => Node.fromString(a) },
     )
 
     res match {
@@ -99,8 +101,7 @@ class RumorSession[T](M: MSG[T]) {
       case (Some(id), Some(round), Some(from)) =>
         Some( Rumor(id, round, from) )
 
-      case _ =>
-        None
+      case _ => None
     }
 
   }
@@ -111,14 +112,14 @@ class RumorSession[T](M: MSG[T]) {
 
 
 
-case class Exchange(id: String, from: Peer)
+case class Exchange(id: String, from: Node)
 
 class ExchangeSession[T](M: MSG[T]) {
 
   def embed(msg: T, exch: Exchange) = {
     val headers = List(
       ("exchange-id", exch.id),
-      ("from", Addr.toString(exch.from) )
+      ("from", Node.toString(exch.from) )
     )
 
     val h1 = M.headers(msg) |> {h => Headers.addBatch(h, headers) }
@@ -140,7 +141,7 @@ class ExchangeSession[T](M: MSG[T]) {
       case ( Some(id), Some(addr) ) =>
 
         Some(
-          Exchange(id, Addr.fromString(addr) )
+          Exchange(id, Node.fromString(addr) )
         )
 
       case _ => None

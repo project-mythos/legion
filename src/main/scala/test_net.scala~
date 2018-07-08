@@ -1,0 +1,63 @@
+package Legion
+
+import Enkidu._
+import Mux.{TMSG, RMSG}
+import com.twitter.util.{Future, RandomSocket}
+
+
+import io.netty.channel.socket.nio.{NioSocketChannel,  NioServerSocketChannel}
+import io.netty.channel.{Channel, ChannelInitializer, ChannelOption}
+import Legion.Epidemic._
+import Legion.PeerService.{Server}
+
+
+
+object TestNet {
+
+
+  trait Handler {
+    def callback(flow: Flow[RMSG, TMSG], req: TMSG): Future[Unit]
+  }
+
+
+  val pool = WorkerPool.default
+
+  val clientInitializer = new ChannelInitializer[Channel] {
+    def initChannel(c: Channel) = {
+      Mux.Pipelines.clientPipeline(c.pipeline)
+    }
+  }
+
+
+
+  
+  def SCM() = {
+    val bootstrap = Connection.bootstrap(
+      classOf[NioSocketChannel],
+      clientInitializer,
+      pool
+    )
+
+    new SimpleCM[TMSG, RMSG](bootstrap)
+  }
+
+  val sampler = new SimpleSampler(SCM)
+
+
+  def makeDisseminator() = {
+    val config = Config(sampler)
+    new Disseminator(config)
+  }
+
+
+
+
+  val lhost = "localhost"
+
+  def nextPeer = Node(lhost, RandomSocket.nextPort)
+
+
+
+
+  class Cluster(size: Int) 
+}

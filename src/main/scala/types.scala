@@ -7,7 +7,6 @@ import Gossip.Types.{
   ORSet => ORSetP, Dot => PDot
 }
 
-import Gossip.Messages.PV
 import com.google.protobuf.ByteString
 import Enki.PipeOps._
 import Enki_DT._
@@ -21,6 +20,7 @@ trait DTCodec[T] {
   def fromByteString(bs: ByteString) =  bs.toByteArray |> decode 
   
 }
+
 
 
 class TPSetCodec[T](C: DTCodec[T]) extends DTCodec[TPSet[T]] {
@@ -55,12 +55,16 @@ trait PBBridge[T, U <: scalapb.GeneratedMessage with scalapb.Message[U] ] extend
 
   def encode(t: T) = toPB(t).toByteArray
   def decode(b: Array[Byte]) = companion.parseFrom(b) |> fromPB
+
+  override def toByteString(t: T) = toPB(t).toByteString
+
+  def decode(bs: ByteString) = companion.parseFrom(bs.toByteArray) |> fromPB
 }
 
 class PBCodec[U  <: scalapb.GeneratedMessage with scalapb.Message[U]](C: scalapb.GeneratedMessageCompanion[U]) extends DTCodec[U] {
 
   def encode(t: U) = t.toByteArray
-  def decode(b: Array[Byte]) = C.parseFrom(b)
+  def decode(b: Array[Byte]): U = C.parseFrom(b)
 }
 
 
@@ -157,3 +161,4 @@ class ORSetBridge[T](codec: DTCodec[T]) extends PBBridge[ORSet[T], ORSetP] {
   }
 
 }
+ 
