@@ -31,7 +31,11 @@ case class View(local: Node, membership: ORSet[Node]) {
   }
 
   def isEmpty() = neighbors.isEmpty
-  def notEmpty() = neighbors.isEmpty == false 
+  def notEmpty() = neighbors.isEmpty == false
+
+  def memberlist = {
+    ORSet.query(membership)
+  }
 
 }
 
