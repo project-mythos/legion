@@ -4,19 +4,21 @@ PB.targets in Compile := Seq(
 )
 
 organization := "demons"
+name := "legion"
 
-version := "0.3.0-SNAPSHOT"
+version := "0.3-SNAPSHOT"
 
-scalaVersion := "2.12.4"
 
 scalacOptions in Compile ++= Seq(
   "-feature",
   "-language:postfixOps"
 )
 
+val enkiVersion = "0.3-SNAPSHOT"
 
 libraryDependencies ++= Seq(
-  "demons" %% "enki-crdt" % "0.3-SNAPSHOT",
+  "demons" %% "enki-crdt" % enkiVersion,
+  "demons" %% "enki-routing" %  enkiVersion,
   "demons" %% "enkidu" % "0.3-SNAPSHOT",
   "com.github.alexandrnikitin" %% "bloom-filter" % "latest.release",
   "org.scalatest" %% "scalatest" % "3.0.5" % "test"
@@ -24,3 +26,4 @@ libraryDependencies ++= Seq(
 
 
 
+fork in run := true 
